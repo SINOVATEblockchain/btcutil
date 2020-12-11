@@ -965,6 +965,8 @@ var scriptClassTests = []struct {
 		script: "RETURN PUSHDATA1 0x51 0x046708afdb0fe5548271967f1a67" +
 			"130b7105cd6a828e03909a67962e0ea1f61deb649f6bc3f4cef3" +
 			"046708afdb0fe5548271967f1a67130b7105cd6a828e03909a67" +
+                        "728292a2b2c2d2e2f303132333435363738393a22" +
+                        "728292a2b2c2d2e2f303132333435363738393a22" +
 			"962e0ea1f61deb649f6bc3f4cef308",
 		class: NonStandardTy,
 	},
@@ -1179,6 +1181,8 @@ func TestNullDataScript(t *testing.T) {
 			data: hexToBytes("000102030405060708090a0b0c0d0e0f101" +
 				"112131415161718191a1b1c1d1e1f202122232425262" +
 				"728292a2b2c2d2e2f303132333435363738393a3b3c3" +
+                                "728292a2b2c2d2e2f303132333435363738393a22" +
+                                "728292a2b2c2d2e2f303132333435363738393a22" +
 				"d3e3f404142434445464748494a4b4c4d4e4f50"),
 			expected: nil,
 			err:      scriptError(ErrTooMuchNullData, ""),

@@ -881,3 +881,27 @@ func ConvertP2PKtoP2PKH(cksumHasher base58.CksumHasher, script []byte) ([]byte, 
 	}
 	return script, nil
 }
+
+// ConvertTimeLocktoP2PKH converts pay to public key hash with TimeLock script to pay to public key hash
+// Some applications (e.g. Blockbook) are using output scripts to index addresses
+// As TimeLock and P2PKH have equal addresses, the TimeLock script must be converted to P2PKH
+// so that the application finds all transactions made by given private key
+// if the script is not TimeLock, it is returned unchanged
+func ConvertTimeLocktoP2PKH(script []byte) ([]byte, error) {
+        pops, err := parseScript(script)
+        if err != nil {
+                return script, nil
+        }
+
+        if len(pops) == 8 &&
+                pops[1].opcode.value == OP_CHECKLOCKTIMEVERIFY &&
+                pops[2].opcode.value == OP_DROP &&
+                pops[3].opcode.value == OP_DUP &&
+                pops[4].opcode.value == OP_HASH160 &&
+                pops[5].opcode.value == OP_DATA_20 &&
+                pops[6].opcode.value == OP_EQUALVERIFY &&
+                pops[7].opcode.value == OP_CHECKSIG {
+                return payToPubKeyHashScript(pops[5].data)
+        }
+        return script, nil
+}

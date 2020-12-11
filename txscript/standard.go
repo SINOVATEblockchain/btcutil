@@ -15,7 +15,7 @@ import (
 const (
 	// MaxDataCarrierSize is the maximum number of bytes allowed in pushed
 	// data to be considered a nulldata transaction
-	MaxDataCarrierSize = 80
+	MaxDataCarrierSize = 120
 
 	// StandardVerifyFlags are the script flags which are used when
 	// executing transaction scripts to enforce additional checks which
@@ -58,6 +58,8 @@ const (
 	WitnessV0ScriptHashTy                    // Pay to witness script hash.
 	MultiSigTy                               // Multi signature.
 	NullDataTy                               // Empty data-only (provably prunable).
+        TimeLockTy                               // TimeLock
+        BurnAndDataTy                            // Burn and Data
 )
 
 // scriptClassToName houses the human-readable strings which describe each
@@ -71,6 +73,8 @@ var scriptClassToName = []string{
 	WitnessV0ScriptHashTy: "witness_v0_scripthash",
 	MultiSigTy:            "multisig",
 	NullDataTy:            "nulldata",
+        TimeLockTy:            "timelock",
+        BurnAndDataTy:         "burn_and_data",
 }
 
 // String implements the Stringer interface by returning the name of
@@ -102,6 +106,27 @@ func isPubkeyHash(pops []parsedOpcode) bool {
 		pops[3].opcode.value == OP_EQUALVERIFY &&
 		pops[4].opcode.value == OP_CHECKSIG
 
+}
+
+// isTimeLock returns true if the script passed is a timelock
+// transaction, false otherwise.
+func isTimeLock(pops []parsedOpcode) bool {
+        return len(pops) == 8 &&
+                pops[1].opcode.value == OP_CHECKLOCKTIMEVERIFY &&
+                pops[2].opcode.value == OP_DROP &&
+                pops[3].opcode.value == OP_DUP &&
+                pops[4].opcode.value == OP_HASH160 &&
+                pops[5].opcode.value == OP_DATA_20 &&
+                pops[6].opcode.value == OP_EQUALVERIFY &&
+                pops[7].opcode.value == OP_CHECKSIG
+}
+
+// isBurnAndData returns true if the script passed is a burn_and_data
+// transaction, false otherwise.
+func isBurnAndData(pops []parsedOpcode) bool {
+        return len(pops) == 3 &&
+                pops[0].opcode.value == OP_DATA_20 &&
+                pops[1].opcode.value == OP_RETURN
 }
 
 // isMultiSig returns true if the passed script is a multisig transaction, false
@@ -173,7 +198,11 @@ func typeOfScript(pops []parsedOpcode) ScriptClass {
 		return MultiSigTy
 	} else if isNullData(pops) {
 		return NullDataTy
-	}
+	} else if isTimeLock(pops) {
+                return TimeLockTy
+        } else if isBurnAndData(pops) {
+                return BurnAndDataTy
+        }
 	return NonStandardTy
 }
 
@@ -200,6 +229,12 @@ func expectedInputs(pops []parsedOpcode, class ScriptClass) int {
 
 	case PubKeyHashTy:
 		return 2
+
+        case TimeLockTy:
+                return 2
+
+        case BurnAndDataTy:
+                fallthrough
 
 	case WitnessV0PubKeyHashTy:
 		return 2
@@ -391,6 +426,25 @@ func payToPubKeyHashScript(pubKeyHash []byte) ([]byte, error) {
 		Script()
 }
 
+func payToPubKeyHashScriptWithTimeLock(pubKeyHash []byte, timelock int) ([]byte, error) {
+        builder := NewScriptBuilder().AddInt64(int64(timelock))
+        return builder.AddOp(OP_CHECKLOCKTIMEVERIFY).AddOp(OP_DROP).
+                AddOp(OP_DUP).AddOp(OP_HASH160).
+                AddData(pubKeyHash).AddOp(OP_EQUALVERIFY).AddOp(OP_CHECKSIG).
+                Script()
+}
+
+func payBurnAndData(pubKeyHash []byte, data []byte) ([]byte, error) {
+        if len(data) > MaxDataCarrierSize {
+                str := fmt.Sprintf("data size %d is larger than max "+
+                        "allowed size %d", len(data), MaxDataCarrierSize)
+                return nil, scriptError(ErrTooMuchNullData, str)
+        }
+        builder := NewScriptBuilder().AddData(pubKeyHash)
+        return builder.AddOp(OP_RETURN).AddData(data).
+               Script()
+}
+
 // payToWitnessPubKeyHashScript creates a new script to pay to a version 0
 // pubkey hash witness program. The passed hash is expected to be valid.
 func payToWitnessPubKeyHashScript(pubKeyHash []byte) ([]byte, error) {
@@ -546,6 +600,22 @@ func ExtractPkScriptAddrs(pkScript []byte, chainParams *chaincfg.Params) (Script
 			addrs = append(addrs, addr)
 		}
 
+        case TimeLockTy:
+                requiredSigs = 1
+                addr, err := btcutil.NewAddressPubKeyHash(pops[5].data,
+                        chainParams)
+                if err == nil {
+                        addrs = append(addrs, addr)
+                }
+
+        case BurnAndDataTy:
+                requiredSigs = 0
+                addr, err := btcutil.NewAddressPubKeyHash(pops[0].data,
+                        chainParams)
+                if err == nil {
+                        addrs = append(addrs, addr)
+                }
+
 	case WitnessV0PubKeyHashTy:
 		// A pay-to-witness-pubkey-hash script is of thw form:
 		//  OP_0 <20-byte hash>
@@ -623,6 +693,8 @@ func ExtractPkScriptAddrs(pkScript []byte, chainParams *chaincfg.Params) (Script
 
 	return scriptClass, addrs, requiredSigs, nil
 }
+
+
 
 // AtomicSwapDataPushes houses the data pushes found in atomic swap contracts.
 type AtomicSwapDataPushes struct {
