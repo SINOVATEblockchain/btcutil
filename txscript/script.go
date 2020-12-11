@@ -858,7 +858,7 @@ func IsUnspendable(pkScript []byte) bool {
 		return true
 	}
 
-	return len(pops) > 0 && pops[0].opcode.value == OP_RETURN
+	return len(pops) > 0 && (pops[0].opcode.value == OP_RETURN || (len(pops) == 3 && pops[0].opcode.value == OP_DATA_20 && pops[1].opcode.value == OP_RETURN))
 }
 
 // ConvertP2PKtoP2PKH converts pay to public key script to pay to public key hash script

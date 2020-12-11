@@ -4323,6 +4323,11 @@ func TestIsUnspendable(t *testing.T) {
 			expected: true,
 		},
 		{
+			// Unspendable
+			pkScript: hexToBytes("14ebaf5ec74cb2e2342dfda0229111738ff4dc742d6a22536448506970653936654635397648556671716344384b4a636d5748633946644c68"),
+			expected: true,
+		},
+		{
 			// Spendable
 			pkScript: []byte{0x76, 0xa9, 0x14, 0x29, 0x95, 0xa0,
 				0xfe, 0x68, 0x43, 0xfa, 0x9b, 0x95, 0x45,
