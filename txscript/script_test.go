@@ -8,37 +8,65 @@ import (
 	"bytes"
 	"reflect"
 	"testing"
-        "encoding/hex"
+	"encoding/hex"
 
 	"github.com/martinboehm/btcd/wire"
 )
 
 // Test ConvertTimeLocktoP2PKH
 func TestConvertTimeLocktoP2PKH(t *testing.T) {
-        t.Parallel()
-        tests := []struct {
-                name string
-                pkScript  []byte
-                compare   []byte
-                expected bool
-        }{
-                {
-                        name: "Convert TimeLock to P2PKH",
-                        pkScript: hexToBytes("03fddb07b17576a9145fa926e9a5f514d89d293019fdcbb2e5969ccb3488ac"),
-                        compare: hexToBytes("76a9145fa926e9a5f514d89d293019fdcbb2e5969ccb3488ac"),
-                        expected: true,
-                },
-        }
-        for i, test := range tests {
-                script, err := ConvertTimeLocktoP2PKH(test.pkScript)
-                if err != nil {
-                        t.Errorf("Converted #%d %v", i, hex.EncodeToString(script))
-                }
-                if !reflect.DeepEqual(script, test.compare) {
-                         t.Errorf("bad result %v", test.name)
-                         continue
-                }
-        }
+	t.Parallel()
+	tests := []struct {
+		name string
+		pkScript  []byte
+		compare   []byte
+		expected bool
+	}{
+		{
+			name: "Convert TimeLock to P2PKH",
+			pkScript: hexToBytes("03fddb07b17576a9145fa926e9a5f514d89d293019fdcbb2e5969ccb3488ac"),
+			compare: hexToBytes("76a9145fa926e9a5f514d89d293019fdcbb2e5969ccb3488ac"),
+			expected: true,
+		},
+	}
+	for i, test := range tests {
+		script, err := ConvertTimeLocktoP2PKH(test.pkScript)
+		if err != nil {
+			t.Errorf("Converted #%d %v", i, hex.EncodeToString(script))
+		}
+		if !reflect.DeepEqual(script, test.compare) {
+			t.Errorf("bad result %v", test.name)
+			continue
+		}
+	}
+}
+
+// Test ConvertBurnAndDatatoP2PKH
+func TestConvertBurnAndDatatoP2PKH(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name string
+		pkScript  []byte
+		compare   []byte
+		expected bool
+	}{
+		{
+			name: "Convert BurnAndData to P2PKH",
+			pkScript: hexToBytes("14ebaf5ec74cb2e2342dfda0229111738ff4dc742d6a22536448506970653936654635397648556671716344384b4a636d5748633946644c68"),
+			compare: hexToBytes("76a914ebaf5ec74cb2e2342dfda0229111738ff4dc742d88ac"),
+			expected: true,
+		},
+	}
+	for i, test := range tests {
+		script, err := ConvertBurnAndDatatoP2PKH(test.pkScript)
+		if err != nil {
+			t.Errorf("Converted #%d %v", i, hex.EncodeToString(script))
+		}
+		if !reflect.DeepEqual(script, test.compare) {
+			t.Errorf("bad result %v", test.name)
+			continue
+		}
+	}
 }
 
 // TestParseOpcode tests for opcode parsing with bad data templates.
